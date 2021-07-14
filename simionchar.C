@@ -91,6 +91,33 @@ void rootPlotCorr(string filename, string var1, string var2){
 	f->Close();
 }
 
+void emittancePlot(string filename, string direction, string velocity){	
+	//Read tree and plot a 2D histogram for var1 against var2
+	string anglestring = direction+"'";
+	string angle="atan("+velocity+"/vz)";
+	txt2Root(filename.c_str());
+	TFile* f = new TFile((filename+".root").c_str(),"READ");
+	TTree* tree = (TTree*) f->Get("T");
+	// TBranch* branch = tree->Branch(anglestring.c_str(), angle, (anglestring+"/F").c_str());
+	TCanvas *c = new TCanvas("canvas","canvas", 150, 100);
+	
+	tree->Draw((angle+":"+direction+">>"+direction+"_"+anglestring).c_str(),"","",50000,0);
+	
+	//Histogram is taken from tree and plotted in a 2D colour plot, then saved.
+	TFile* out = new TFile((filename+"_2d.root").c_str(),"UPDATE");
+	TH2F* histo = new TH2F("histo","histo",2000,0,2000,2000,0,2000);
+	histo = f->Get<TH2F>((direction+"_"+anglestring).c_str());
+	histo->SetStats(kFALSE);
+	histo->Draw();
+	histo->SetMarkerColor(kAzure-3);
+	histo->GetXaxis()->SetTitle((direction+" [mm]").c_str());
+	histo->GetYaxis()->SetTitle((anglestring+ " [mrad]").c_str());
+	c->SaveAs((filename+"_"+direction+"emittance.pdf").c_str());
+	histo->Write();
+	out->Close();
+	f->Close();
+}
+
 vector<fitvar> fitAllVariables(string filename, vector<string> inlist){
 	vector<fitvar> vec;
 	vector<float> params;
@@ -141,15 +168,18 @@ int simionchar(){
 
 	//List of the variables is fed to the fitAllVariables function, which outputs a dictionary in the form {char(variable): [array of fit parameters]}
 	vector<string> vars = {"tof", "x", "y", "z", "vx", "vy", "vz", "ke"};
-	vector<fitvar> dic = fitAllVariables(filename,vars);
+	//vector<fitvar> dic = fitAllVariables(filename,vars);
 
 	for (int i=0; i<vars.size(); i++){
 		for (int j=i+1; j<vars.size()-1; j++){
-			rootPlotCorr(filename, vars[i], vars[j]);
+			//rootPlotCorr(filename, vars[i], vars[j]);
 		}
 	}
+	
+	emittancePlot(filename, "x", "vx");
+	emittancePlot(filename, "y", "vy");
 
-	outDic(filename, dic);
+	//outDic(filename, dic);
 	
 	f.close();
 	gSystem->cd("..");
