@@ -12,6 +12,8 @@
 #include <cstdlib>
 #include <fstream>
 #include <map>
+#include <locale>
+#include <algorithm>
 
 // ROOT libraries
 #include <TH1.h>
@@ -94,25 +96,40 @@ void rootPlotCorr(string filename, string var1, string var2){
 void emittancePlot(string filename, string direction, string velocity){	
 	//Read tree and plot a 2D histogram for var1 against var2
 	string anglestring = direction+"'";
-	string angle="atan("+velocity+"/vz)";
+	string expression = "1000*atan("+velocity+"/vz)";
 	txt2Root(filename.c_str());
+
 	TFile* f = new TFile((filename+".root").c_str(),"READ");
 	TTree* tree = (TTree*) f->Get("T");
-	// TBranch* branch = tree->Branch(anglestring.c_str(), angle, (anglestring+"/F").c_str());
 	TCanvas *c = new TCanvas("canvas","canvas", 150, 100);
+
+	tree->Draw((expression+":"+direction+">>"+direction+"_"+anglestring).c_str(),"");
 	
-	tree->Draw((angle+":"+direction+">>"+direction+"_"+anglestring).c_str(),"","",50000,0);
-	
+	// int nentries = tree->GetEntries();
+	// float max = 0, ref = 0;
+	// for(int i; i < nentries; i++){
+	// 	ref = abs(tree->GetV1()[i]);
+	// 	if(ref > max){
+	// 		max = ref;
+	// 	} 
+	// 	cout << nentries << "\n" << ref << "\t" << max << endl;
+	// }
+	// max = 1.1*max;
+
 	//Histogram is taken from tree and plotted in a 2D colour plot, then saved.
 	TFile* out = new TFile((filename+"_2d.root").c_str(),"UPDATE");
-	TH2F* histo = new TH2F("histo","histo",2000,0,2000,2000,0,2000);
-	histo = f->Get<TH2F>((direction+"_"+anglestring).c_str());
+	// new TH2F("histo","histo",50000,0,50000,50000,0,50000)
+	TH2F* histo = f->Get<TH2F>((direction+"_"+anglestring).c_str());
+	histo->SetMinimum(25);
+	histo->Draw("colz");
 	histo->SetStats(kFALSE);
-	histo->Draw();
-	histo->SetMarkerColor(kAzure-3);
+	histo->Rebin(10000);
+	// histo->GetYaxis()->SetRangeUser(-300,300);
+	if(direction == 'x'){histo->SetTitle("Emittance X");}
+	else{				 histo->SetTitle("Emittance Y");}
 	histo->GetXaxis()->SetTitle((direction+" [mm]").c_str());
 	histo->GetYaxis()->SetTitle((anglestring+ " [mrad]").c_str());
-	c->SaveAs((filename+"_"+direction+"emittance.pdf").c_str());
+	c->SaveAs((filename+"_emittance"+direction+".pdf").c_str());
 	histo->Write();
 	out->Close();
 	f->Close();
@@ -128,7 +145,7 @@ vector<fitvar> fitAllVariables(string filename, vector<string> inlist){
 		params = rootPlotGaus(filename, inlist[i]);
 		aux.constant = params[0];
 		aux.centroid = params[1];
-		aux.sigma	= params[2];
+		aux.sigma	 = params[2];
 		
 		vec.push_back(aux);
 	}

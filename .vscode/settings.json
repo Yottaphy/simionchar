@@ -9,6 +9,7 @@
         "*.tcc": "cpp",
         "vector": "cpp",
         "ostream": "cpp",
-        "new": "cpp"
+        "new": "cpp",
+        "cmath": "cpp"
     }
 }
